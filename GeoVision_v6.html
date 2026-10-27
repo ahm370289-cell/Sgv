@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sudan GeoVision | الإصدار 0.6</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+:root{--navy:#12304a;--blue:#1f6b8f;--teal:#168b83;--bg:#f3f6f8;--card:#fff;--ink:#1c2933;--muted:#637583;--line:#dbe3e8;--warn:#fff5d8}
+*{box-sizing:border-box}body{margin:0;font-family:Tahoma,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+header{background:linear-gradient(120deg,#12304a,#1f6b8f);color:white;padding:20px 22px}
+header h1{margin:0 0 7px;font-size:24px}header p{margin:0;color:#dcecf5;font-size:13px}
+.shell{max-width:1400px;margin:auto;padding:16px}.topstats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px}
+.stat,.panel{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:14px;box-shadow:0 2px 8px #17344b0a}
+.stat small{display:block;color:var(--muted);margin-bottom:6px}.stat strong{font-size:23px;color:var(--navy)}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}.tab{border:1px solid var(--line);border-radius:9px;background:white;padding:10px 14px;cursor:pointer;font-weight:bold;color:var(--navy)}.tab.active{background:var(--navy);color:white}
+.layout{display:grid;grid-template-columns:minmax(310px,390px) minmax(0,1fr);gap:12px;align-items:start}
+.panel h2{font-size:17px;margin:0 0 12px;color:var(--navy)}label{display:block;font-size:12px;font-weight:bold;color:#405665;margin:9px 0 5px}
+input,select,textarea{width:100%;border:1px solid #cbd7de;border-radius:8px;padding:10px;background:white;font:inherit;font-size:13px;color:var(--ink)}
+textarea{min-height:72px;resize:vertical}.formgrid{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+button,.button{border:0;border-radius:8px;padding:10px 13px;font:inherit;font-size:13px;font-weight:bold;cursor:pointer;background:var(--blue);color:white}
+button.secondary{background:#e9f0f4;color:var(--navy);border:1px solid var(--line)}button.good{background:var(--teal)}button.danger{background:#a83b3b}
+#map{height:570px;border-radius:10px;border:1px solid var(--line);z-index:1}.maptools{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.hidden{display:none!important}.notice{font-size:12px;color:#67521b;background:var(--warn);padding:10px;border-radius:8px;line-height:1.7;margin:10px 0}
+.muted{color:var(--muted);font-size:12px;line-height:1.7}.tablewrap{overflow:auto;max-height:460px;border:1px solid var(--line);border-radius:9px}
+table{border-collapse:collapse;width:100%;font-size:12px;background:white}th,td{padding:9px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}th{background:#edf3f6;position:sticky;top:0;z-index:1}tr:hover td{background:#f8fbfc}
+.pill{display:inline-block;padding:3px 7px;border-radius:99px;background:#e5f4f1;color:#11665f;font-size:11px}
+.sourcecard{border:1px solid var(--line);border-radius:10px;padding:12px;margin:8px 0}.sourcecard h3{margin:0 0 5px;font-size:14px}.sourcecard a{color:#17658b;word-break:break-all}.smallbtn{padding:6px 9px;font-size:11px}
+footer{padding:20px;text-align:center;color:var(--muted);font-size:12px}
+@media(max-width:850px){.layout{grid-template-columns:1fr}.topstats{grid-template-columns:repeat(2,minmax(0,1fr))}#map{height:440px}.shell{padding:10px}header h1{font-size:20px}}
+</style></head>
+<body>
+<header><h1>🛰️ Sudan GeoVision</h1><p>منصة جغرافية أولية للسودان — الإصدار 0.6 | خرائط، سجل بيانات، مصادر، واستيراد وتصدير</p></header>
+<div class="shell">
+<div class="topstats">
+<div class="stat"><small>السجلات المحلية</small><strong id="countAll">0</strong></div>
+<div class="stat"><small>مصادر موثقة</small><strong id="countSources">4</strong></div>
+<div class="stat"><small>السجلات الظاهرة</small><strong id="countVisible">0</strong></div>
+<div class="stat"><small>حالة التخزين</small><strong style="font-size:15px">محلي بالجهاز</strong></div>
+</div>
+<div class="tabs">
+<button class="tab active" data-tab="maptab">الخريطة والسجل</button><button class="tab" data-tab="sources">مصادر البيانات</button><button class="tab" data-tab="importexport">استيراد وتصدير</button><button class="tab" data-tab="about">عن المشروع</button>
+</div>
+<section id="maptab">
+<div class="layout">
+<div class="panel">
+<h2 id="formTitle">إضافة معلم جغرافي</h2>
+<form id="featureForm">
+<input type="hidden" id="editId">
+<div class="formgrid">
+<div><label for="nameAr">الاسم بالعربية *</label><input id="nameAr" required placeholder="مثال: مستشفى أو قرية"></div>
+<div><label for="nameEn">الاسم بالإنجليزية</label><input id="nameEn" placeholder="English name"></div>
+<div><label for="kind">نوع المعلم *</label><select id="kind" required><option value="مدينة">مدينة</option><option value="قرية">قرية</option><option value="حي">حي</option><option value="طريق">طريق</option><option value="نهر">نهر</option><option value="مستشفى">مستشفى</option><option value="مدرسة">مدرسة</option><option value="بئر">بئر</option><option value="مرفق عام">مرفق عام</option><option value="موقع أثري">موقع أثري</option><option value="موقع تحليل">موقع تحليل/صورة</option><option value="أخرى">أخرى</option></select></div>
+<div><label for="state">الولاية (نص وصفي)</label><input id="state" placeholder="اسم الولاية"></div>
+<div><label for="locality">المحلية (نص وصفي)</label><input id="locality" placeholder="اسم المحلية"></div>
+<div><label for="accuracy">دقة الموقع</label><select id="accuracy"><option>غير محددة</option><option>ميدانية / GPS</option><option>مستخرجة من مصدر موثوق</option><option>تقريبية</option></select></div>
+<div><label for="lat">خط العرض *</label><input id="lat" type="number" step="any" min="-90" max="90" required placeholder="مثال: 15.5007"></div>
+<div><label for="lon">خط الطول *</label><input id="lon" type="number" step="any" min="-180" max="180" required placeholder="مثال: 32.5599"></div>
+<div><label for="source">المصدر</label><select id="source"><option>غير محدد</option><option>OpenStreetMap</option><option>geoBoundaries</option><option>Open Admin Data</option><option>مصدر حكومي</option><option>GPS / مسح ميداني</option><option>مصدر آخر</option></select></div>
+<div><label for="date">تاريخ البيانات</label><input id="date" type="date"></div>
+</div>
+<label for="notes">ملاحظات / رابط المصدر</label><textarea id="notes" placeholder="اكتب رابط المصدر، الترخيص، تاريخ التحقق، أو ملاحظات الجودة"></textarea>
+<div class="btns"><button type="submit" class="good" id="saveBtn">حفظ المعلم</button><button type="button" class="secondary" id="resetBtn">تفريغ الحقول</button><button type="button" class="secondary" id="pickBtn">اختيار الموقع من الخريطة</button></div>
+<p class="muted">اضغط «اختيار الموقع من الخريطة» ثم انقر على الخريطة لتعبئة الإحداثيات. لا تحفظ بيانات شخصية أو حساسة.</p>
+</form>
+<hr style="border:0;border-top:1px solid var(--line);margin:16px 0">
+<h2>البحث والتصفية</h2>
+<label for="search">بحث بالاسم أو الولاية أو المحلية</label><input id="search" placeholder="اكتب كلمة للبحث">
+<div class="formgrid"><div><label for="filterKind">النوع</label><select id="filterKind"><option value="">كل الأنواع</option><option>مدينة</option><option>قرية</option><option>حي</option><option>طريق</option><option>نهر</option><option>مستشفى</option><option>مدرسة</option><option>بئر</option><option>مرفق عام</option><option>موقع أثري</option><option>موقع تحليل</option><option>أخرى</option></select></div>
+<div><label for="filterState">الولاية</label><input id="filterState" placeholder="تصفية بالولاية"></div></div>
+<div class="btns"><button type="button" class="secondary" id="clearFilters">مسح التصفية</button><button type="button" class="secondary" id="zoomSudan">عرض السودان</button></div>
+</div>
+<div class="panel"><h2>خريطة السودان وسجل المعالم</h2><div class="maptools"><select id="basemap" style="max-width:230px"><option value="imagery">صور فضائية (Esri)</option><option value="osm">خريطة الشوارع (OpenStreetMap)</option><option value="topo">تضاريس (OpenTopoMap)</option></select><button class="secondary" id="fitRecords">إظهار السجلات</button></div><div id="map"></div>
+<div class="notice">تنبيه: الخلفيات تأتي من مزودي الخرائط عبر الإنترنت. صور الأقمار الصناعية لا تعني بالضرورة أنها حديثة أو عالية الدقة على مستوى المنازل. تحقّق من تاريخ الصورة وشروط الاستخدام.</div>
+<h2 style="margin-top:18px">سجل البيانات</h2><div class="tablewrap"><table><thead><tr><th>الاسم</th><th>النوع</th><th>الولاية</th><th>الإحداثيات</th><th>الإجراءات</th></tr></thead><tbody id="recordsBody"></tbody></table></div><p class="muted">البيانات التجريبية غير موجودة افتراضيًا لتجنب عرض مواقع غير موثقة على أنها حقيقية.</p>
+</div></div></section>
+<section id="sources" class="panel hidden"><h2>كتالوج مصادر البيانات</h2><p class="muted">مصادر مرشحة للاستخدام؛ راجع الترخيص والتاريخ والتغطية قبل إعادة النشر أو اعتماد الحدود إداريًا.</p>
+<div class="sourcecard"><h3>1. OpenStreetMap / Geofabrik — السودان</h3><p>بيانات طرق وأماكن ومعالم جغرافية قابلة للتنزيل. التغطية والتفاصيل تختلف حسب المنطقة.</p><a href="https://download.geofabrik.de/africa/sudan.html" target="_blank" rel="noopener">https://download.geofabrik.de/africa/sudan.html</a><p><span class="pill">OSM / ODbL</span> راجع متطلبات الإسناد والترخيص.</p></div>
+<div class="sourcecard"><h3>2. geoBoundaries — حدود إدارية</h3><p>يوفر حدودًا إدارية مفتوحة بمستويات مختلفة. لا تفترض أنها الحدود القانونية المعتمدة دون تحقق.</p><a href="https://www.geoboundaries.org/" target="_blank" rel="noopener">https://www.geoboundaries.org/</a><p><span class="pill">تحقق من مستوى ADM والترخيص</span></p></div>
+<div class="sourcecard"><h3>3. Open Admin Data — التقسيمات الإدارية للسودان</h3><p>مستودع بيانات مجتمعي للتقسيمات الإدارية؛ تحقق من تاريخ الإصدار وطريقة بناء البيانات قبل استخدامها.</p><a href="https://github.com/open-admin-data/sudan-administrative-divisions" target="_blank" rel="noopener">مستودع GitHub</a></div>
+<div class="sourcecard"><h3>4. البوابة الجغرافية السودانية</h3><p>بوابة محلية محتملة للحصول على بيانات وخدمات جغرافية؛ قد يتطلب الوصول أو الاستخدام شروطًا محددة.</p><a href="https://geoportal.gov.sd/" target="_blank" rel="noopener">https://geoportal.gov.sd/</a></div>
+<div class="notice">هذه قائمة مصادر، وليست شهادة بأن كل البيانات حديثة أو مكتملة أو رسمية. سجّل في ملاحظات كل استيراد: رابط المصدر، تاريخ التنزيل، الترخيص، مستوى الدقة، وما إذا كانت البيانات قد خضعت للتحقق.</div>
+</section>
+<section id="importexport" class="panel hidden"><h2>استيراد وتصدير البيانات</h2>
+<div class="layout"><div class="panel"><h2>استيراد ملف</h2><label for="fileInput">JSON أو CSV أو GeoJSON</label><input type="file" id="fileInput" accept=".json,.csv,.geojson,application/json,text/csv">
+<div class="btns"><button id="importBtn">استيراد الملف</button></div><p class="muted">JSON يُقبل كقائمة سجلات أو نسخة احتياطية مولّدة من هذه المنصة. GeoJSON يدعم Point features في هذه النسخة. CSV يتوقع أعمدة مثل nameAr, kind, lat, lon.</p>
+<h2 style="margin-top:20px">نسخة احتياطية</h2><div class="btns"><button class="good" id="backupJson">تصدير JSON</button><button class="secondary" id="exportCsv">تصدير CSV</button><button class="secondary" id="exportGeo">تصدير GeoJSON</button></div></div>
+<div class="panel"><h2>فحص جودة البيانات</h2><p>شغّل فحصًا سريعًا للسجلات المخزنة محليًا.</p><div class="btns"><button id="qualityBtn">فحص الجودة</button></div><div id="qualityResult" class="muted" style="margin-top:12px"></div><div class="notice">الاستيراد لا يثبت صحة البيانات. راجع الإحداثيات، التكرارات، المصدر، الترخيص، والتاريخ قبل استخدامها في تحليل أو تقرير.</div><button class="danger" id="deleteAll">حذف جميع السجلات المحلية</button></div></div>
+</section>
+<section id="about" class="panel hidden"><h2>عن Sudan GeoVision v0.6</h2><p>واجهة أولية عربية لإدارة سجلات جغرافية للسودان، مع خريطة تفاعلية وكتالوج مصادر واستيراد وتصدير وفحص جودة أساسي.</p>
+<ul><li>الخريطة مبنية على Leaflet وتحتاج اتصال إنترنت لتحميل المكتبة وطبقات الخرائط.</li><li>السجلات تحفظ في تخزين المتصفح (localStorage) على هذا الجهاز والمتصفح فقط.</li><li>لا توجد قاعدة بيانات مشتركة أو حسابات مستخدمين أو مزامنة خادمية في هذه النسخة.</li><li>مخطط PostgreSQL/PostGIS المرفق نقطة بداية للتطوير الخادمي وليس قاعدة مستضافة جاهزة.</li><li>البيانات الإدارية ليست مضمنة تلقائيًا؛ استخدم كتالوج المصادر لاستيراد ملفات تتحقق منها.</li></ul><p>التقنيات: HTML, CSS, JavaScript, Leaflet, GeoJSON, CSV, PostgreSQL/PostGIS.</p></section>
+</div><footer>Sudan GeoVision — مشروع أولي مفتوح للتطوير | تحقّق من المصادر والتراخيص قبل الاستخدام الرسمي</footer>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const STORAGE_KEY='sudan_geovision_v06_records';
+let records=loadRecords(), markers={}, picking=false;
+const $=id=>document.getElementById(id);
+function loadRecords(){try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]')}catch(e){return []}}
+function saveRecords(){localStorage.setItem(STORAGE_KEY,JSON.stringify(records));renderAll()}
+const map=L.map('map').setView([15.5,30.2],5);
+const layers={
+ imagery:L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'Tiles © Esri'}),
+ osm:L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap contributors'}),
+ topo:L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',{attribution:'© OpenTopoMap (CC-BY-SA)'})
+};
+layers.imagery.addTo(map);
+$('basemap').addEventListener('change',e=>{Object.values(layers).forEach(l=>map.removeLayer(l));layers[e.target.value].addTo(map)});
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function filtered(){const q=$('search').value.trim().toLowerCase(), k=$('filterKind').value, st=$('filterState').value.trim().toLowerCase();return records.filter(r=>(!q||[r.nameAr,r.nameEn,r.state,r.locality,r.notes].some(x=>String(x||'').toLowerCase().includes(q)))&&(!k||r.kind===k)&&(!st||String(r.state||'').toLowerCase().includes(st)))}
+function renderAll(){
+ $('countAll').textContent=records.length;$('countVisible').textContent=filtered().length;
+ const visible=filtered();$('recordsBody').innerHTML=visible.map(r=>`<tr><td>${esc(r.nameAr)}<br><span class="muted">${esc(r.nameEn||'')}</span></td><td>${esc(r.kind)}</td><td>${esc(r.state||'—')}</td><td>${Number(r.lat).toFixed(5)}, ${Number(r.lon).toFixed(5)}</td><td><button class="smallbtn" onclick="zoomRecord('${r.id}')">عرض</button> <button class="smallbtn secondary" onclick="editRecord('${r.id}')">تعديل</button> <button class="smallbtn danger" onclick="removeRecord('${r.id}')">حذف</button></td></tr>`).join('')||'<tr><td colspan="5">لا توجد سجلات تطابق البحث.</td></tr>';
+ Object.values(markers).forEach(m=>map.removeLayer(m));markers={};
+ visible.forEach(r=>{const m=L.marker([r.lat,r.lon]).addTo(map).bindPopup(`<b>${esc(r.nameAr)}</b><br>${esc(r.kind)}<br>${esc(r.state||'')}<br>${r.lat}, ${r.lon}`);markers[r.id]=m});
+}
+function resetForm(){ $('featureForm').reset();$('editId').value='';$('formTitle').textContent='إضافة معلم جغرافي';$('saveBtn').textContent='حفظ المعلم'}
+$('featureForm').addEventListener('submit',e=>{e.preventDefault();const id=$('editId').value||('sgv-'+Date.now()+'-'+Math.random().toString(36).slice(2,7));const r={id,nameAr:$('nameAr').value.trim(),nameEn:$('nameEn').value.trim(),kind:$('kind').value,state:$('state').value.trim(),locality:$('locality').value.trim(),accuracy:$('accuracy').value,lat:Number($('lat').value),lon:Number($('lon').value),source:$('source').value,date:$('date').value,notes:$('notes').value.trim(),updatedAt:new Date().toISOString()};if(!r.nameAr||!Number.isFinite(r.lat)||!Number.isFinite(r.lon)||Math.abs(r.lat)>90||Math.abs(r.lon)>180){alert('تحقق من الاسم والإحداثيات.');return}const idx=records.findIndex(x=>x.id===id);if(idx>=0)records[idx]=r;else records.push(r);saveRecords();resetForm();map.setView([r.lat,r.lon],11)});
+$('resetBtn').onclick=resetForm;
+$('pickBtn').onclick=()=>{picking=true;alert('انقر على الخريطة لاختيار الموقع.');};
+map.on('click',e=>{if(picking){$('lat').value=e.latlng.lat.toFixed(6);$('lon').value=e.latlng.lng.toFixed(6);picking=false}});
+window.zoomRecord=id=>{const r=records.find(x=>x.id===id);if(r){map.setView([r.lat,r.lon],13);if(markers[id])markers[id].openPopup()}};
+window.editRecord=id=>{const r=records.find(x=>x.id===id);if(!r)return;Object.keys({nameAr:1,nameEn:1,kind:1,state:1,locality:1,accuracy:1,lat:1,lon:1,source:1,date:1,notes:1}).forEach(k=>$(k).value=r[k]??'');$('editId').value=r.id;$('formTitle').textContent='تعديل معلم';$('saveBtn').textContent='حفظ التعديلات';window.scrollTo({top:0,behavior:'smooth'})};
+window.removeRecord=id=>{const r=records.find(x=>x.id===id);if(r&&confirm('حذف السجل: '+r.nameAr+'؟')){records=records.filter(x=>x.id!==id);saveRecords()}};
+['search','filterKind','filterState'].forEach(id=>$(id).addEventListener(id==='search'||id==='filterState'?'input':'change',renderAll));
+$('clearFilters').onclick=()=>{$('search').value='';$('filterKind').value='';$('filterState').value='';renderAll()};
+$('zoomSudan').onclick=()=>map.fitBounds([[8.5,21.5],[22.2,38.7]]);
+$('fitRecords').onclick=()=>{const v=filtered();if(v.length)map.fitBounds(L.latLngBounds(v.map(r=>[r.lat,r.lon])),{padding:[30,30],maxZoom:12})};
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===b));['maptab','sources','importexport','about'].forEach(id=>$(id).classList.toggle('hidden',id!==b.dataset.tab));if(b.dataset.tab==='maptab')setTimeout(()=>map.invalidateSize(),100)});
+function download(name,content,type){const a=document.createElement('a'),blob=new Blob([content],{type});a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+$('backupJson').onclick=()=>download('sudan_geovision_backup.json',JSON.stringify({app:'Sudan GeoVision',version:'0.6',exportedAt:new Date().toISOString(),records},null,2),'application/json');
+function csvEscape(v){return '"'+String(v??'').replace(/"/g,'""')+'"'}
+$('exportCsv').onclick=()=>{const keys=['id','nameAr','nameEn','kind','state','locality','accuracy','lat','lon','source','date','notes','updatedAt'];download('sudan_geovision_records.csv','\ufeff'+[keys.join(','),...records.map(r=>keys.map(k=>csvEscape(r[k])).join(','))].join('\r\n'),'text/csv;charset=utf-8')};
+$('exportGeo').onclick=()=>download('sudan_geovision_points.geojson',JSON.stringify({type:'FeatureCollection',features:records.map(r=>({type:'Feature',geometry:{type:'Point',coordinates:[Number(r.lon),Number(r.lat)]},properties:{...r}}))},null,2),'application/geo+json');
+function parseCSV(text){const rows=[];let row=[],v='',q=false;for(let i=0;i<text.length;i++){const c=text[i],n=text[i+1];if(c==='"'&&q&&n==='"'){v+='"';i++}else if(c==='"'){q=!q}else if(c===','&&!q){row.push(v);v=''}else if((c==='\n'||c==='\r')&&!q){if(c==='\r'&&n==='\n')i++;row.push(v);if(row.some(x=>x!==''))rows.push(row);row=[];v=''}else v+=c}row.push(v);if(row.some(x=>x!==''))rows.push(row);const head=(rows.shift()||[]).map(x=>x.trim());return rows.map(a=>Object.fromEntries(head.map((h,i)=>[h,(a[i]||'').trim()])))}
+$('importBtn').onclick=async()=>{const f=$('fileInput').files[0];if(!f){alert('اختر ملفًا أولًا.');return}try{const txt=await f.text();let arr;if(f.name.toLowerCase().endsWith('.csv'))arr=parseCSV(txt);else{const obj=JSON.parse(txt);if(obj.type==='FeatureCollection')arr=obj.features.map(feat=>({...feat.properties,lon:feat.geometry?.coordinates?.[0],lat:feat.geometry?.coordinates?.[1]}));else arr=Array.isArray(obj)?obj:(obj.records||[])}let ok=0;arr.forEach(x=>{const lat=Number(x.lat??x.latitude),lon=Number(x.lon??x.lng??x.longitude),nameAr=x.nameAr??x.name_ar??x.name??x.title;if(!nameAr||!Number.isFinite(lat)||!Number.isFinite(lon)||Math.abs(lat)>90||Math.abs(lon)>180)return;records.push({id:'sgv-'+Date.now()+'-'+Math.random().toString(36).slice(2,8),nameAr:String(nameAr),nameEn:x.nameEn??x.name_en??'',kind:x.kind??x.type??'أخرى',state:x.state??x.admin1??'',locality:x.locality??x.admin2??'',accuracy:x.accuracy??'غير محددة',lat,lon,source:x.source??'مصدر غير محدد',date:x.date??'',notes:x.notes??x.description??'',updatedAt:new Date().toISOString()});ok++});saveRecords();alert(`تم استيراد ${ok} سجل صالح من أصل ${arr.length}. راجع السجلات المستوردة.`)}catch(err){alert('تعذر قراءة الملف. تأكد أنه JSON أو CSV أو GeoJSON صحيح.')}}; 
+$('qualityBtn').onclick=()=>{const issues=[];const seen=new Set();records.forEach((r,i)=>{if(!r.nameAr)issues.push(`السجل ${i+1}: الاسم مفقود`);if(!Number.isFinite(Number(r.lat))||Math.abs(Number(r.lat))>90||!Number.isFinite(Number(r.lon))||Math.abs(Number(r.lon))>180)issues.push(`السجل ${i+1}: إحداثيات غير صالحة`);if(!r.source||r.source==='غير محدد'||r.source==='مصدر غير محدد')issues.push(`السجل ${i+1}: المصدر غير موثق`);if(!r.date)issues.push(`السجل ${i+1}: تاريخ البيانات غير مسجل`);const key=String(r.nameAr).trim().toLowerCase()+'|'+Number(r.lat).toFixed(4)+'|'+Number(r.lon).toFixed(4);if(seen.has(key))issues.push(`السجل ${i+1}: احتمال تكرار`);seen.add(key)});$('qualityResult').innerHTML=`عدد السجلات: ${records.length}<br>ملاحظات الجودة: ${issues.length}<br>`+(issues.length?issues.slice(0,60).map(esc).join('<br>'):'لم تُكتشف مشكلات وفق الفحوص الأساسية. هذا لا يثبت صحة المصدر أو دقة الموقع.')}
+$('deleteAll').onclick=()=>{if(confirm('هل أنت متأكد من حذف جميع السجلات من هذا المتصفح؟ صدّر نسخة احتياطية أولًا إن احتجت إليها.')){records=[];saveRecords();resetForm();$('qualityResult').textContent='تم حذف السجلات المحلية.'}};
+renderAll();
+</script></body></html>
